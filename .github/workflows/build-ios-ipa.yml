@@ -1,9 +1,13 @@
+
+    
+  
 name: Build ArchiveTune IPA (Free Sideloading)
 
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -18,14 +22,17 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Show Xcode version
+      - name: Check Xcode
         run: xcodebuild -version
+
+      - name: Verify Xcode project exists
+        run: test -d "ArchiveTune-iOS/ArchiveTune.xcodeproj"
 
       - name: Build app without signing
         run: |
           set -euo pipefail
           xcodebuild \
-            -project ArchiveTune.xcodeproj \
+            -project "ArchiveTune-iOS/ArchiveTune.xcodeproj" \
             -scheme ArchiveTune \
             -configuration Release \
             -sdk iphoneos \
@@ -53,58 +60,4 @@ jobs:
           path: build/ipa/ArchiveTune-unsigned.ipa
           if-no-files-found: error
           retention-days: 14
-name: Build ArchiveTune IPA (Free Sideloading)
 
-on:
-  workflow_dispatch:
-  push:
-    branches: [ main ]
-
-permissions:
-  contents: read
-
-jobs:
-  build-ipa:
-    name: Build unsigned iOS IPA on macOS
-    runs-on: macos-15
-    timeout-minutes: 45
-
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-
-      - name: Show Xcode version
-        run: xcodebuild -version
-
-      - name: Build app without signing
-        run: |
-          set -euo pipefail
-          xcodebuild \
-            -project ArchiveTune.xcodeproj \
-            -scheme ArchiveTune \
-            -configuration Release \
-            -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            -derivedDataPath build/DerivedData \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY='' \
-            build
-
-      - name: Package unsigned IPA
-        run: |
-          set -euo pipefail
-          APP_PATH="build/DerivedData/Build/Products/Release-iphoneos/ArchiveTune.app"
-          test -d "$APP_PATH"
-          mkdir -p build/ipa/Payload
-          cp -R "$APP_PATH" build/ipa/Payload/
-          (cd build/ipa && /usr/bin/zip -qry ArchiveTune-unsigned.ipa Payload)
-          test -f build/ipa/ArchiveTune-unsigned.ipa
-
-      - name: Upload unsigned IPA artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ArchiveTune-unsigned-IPA
-          path: build/ipa/ArchiveTune-unsigned.ipa
-          if-no-files-found: error
-          retention-days: 14
